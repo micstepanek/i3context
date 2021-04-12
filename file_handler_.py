@@ -61,5 +61,5 @@ def _list_dir(folder):
     return commands
 
 
-with open('/config.yml', 'r') as file:
+with open('./config.yml', 'r') as file:
     config = yaml.safe_load(file)
