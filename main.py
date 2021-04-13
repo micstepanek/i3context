@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 # modules
 import graphical_elements
 import i3ipc_interface
-import file_handler_
+import file_handler
 
 
 class Launcher:
@@ -95,7 +95,7 @@ class GUI:
                 return
             else:
                 self.widget.reappear()
-                self.sublist = file_handler_.get_command_list(
+                self.sublist = file_handler.get_command_list(
                     i3.cache.current_workspace,
                     i3.cache.focused_window)
 
