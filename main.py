@@ -28,14 +28,6 @@ class GUI:
         self.workspaces_on = False
         self.sublist = None
 
-    @Slot()
-    def counteract_keyboard_endangered(self):
-        i3.cache.update()
-        self._prepare_position()
-        self.widget.clear()
-        i3.command('mode i3context')
-#        self.widget.reappear()
-
     def wake_up(self):
         i3.cache.update()
         self._prepare_position()
@@ -314,7 +306,6 @@ if __name__ == "__main__":
     app = QApplication()
     gui = GUI()
     i3ipc_interface.signals.binding.connect(gui.handle_binding)
-    i3ipc_interface.signals.keyboard_endangered.connect(gui.counteract_keyboard_endangered)
     gui.widget.submit_retag_entry.connect(tags.process_retag_entry)
     app.exec_()
     # this will run after app.exit()

@@ -28,16 +28,11 @@ class I3(i3ipc.Connection):
 class I3Listener:
     def listen_for_bindings(self):
         i3.on(i3ipc.Event.BINDING, self.filter_binding_events)
-        i3.on(i3ipc.Event.WINDOW_FOCUS, self.filter_focus_events)
         threading.Thread(target=i3.main).start()
 
     def filter_binding_events(self, _, event):
         if event.binding.command.endswith('i3context'):
             signals.binding.emit(event)
-
-    def filter_focus_events(self, _, event):
-        if event.container.window_class == 'VirtualBox Machine':
-            signals.keyboard_endangered.emit()
 
 
 class I3Cache:
@@ -56,7 +51,6 @@ class I3Cache:
 
 class Signals(QObject):
     binding = Signal(object)
-    keyboard_endangered = Signal()
 
 signals = Signals()
 i3 = I3()
