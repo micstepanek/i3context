@@ -1,8 +1,13 @@
+
+
 #!/usr/bin/env python3.8
 """
 """
 import logging
 import subprocess
+import time
+
+import pyautogui
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QApplication
 # modules
@@ -10,6 +15,7 @@ import graphical_elements
 import i3ipc_interface
 import file_handler
 
+logger = logging.getLogger(__name__)
 
 class Launcher:
     def fork(self, string):
@@ -25,18 +31,22 @@ class GUI:
         # override Escape key behavior
         self.widget.reject = self.hide_and_reset
         self.position = 0
-        self.workspaces_on = False
+        self.workspace_mode = False
         self.sublist = None
+        self.retag_mode = False
 
     def wake_up(self):
         i3.cache.update()
         self._prepare_position()
         self.widget.clear()
         self.widget.reappear()
-        # '[instance="main.py"]move window to workspace current, focus')
-        #    subprocess.check_output(['i3-msg', '[instance="main.py"]', 'focus'])
+        if i3.cache.focused_window.floating in ['auto_on', 'user_on']:
+            i3.command('[instance="i3context.py"] focus')
 
-    def show_retag_entry(self):
+    def prepare_for_retag_entry(self):
+        #i3.command('[instance="i3context.py"] focus')
+        #subprocess.run(['xdotool','getwindowfocus','windowfocus'])
+        #the above is not working, focusing done in i3 config
         tags.update()
         self._prepare_tags()
         i3.mode_default()
@@ -45,7 +55,8 @@ class GUI:
     def _self_reset(self):
         self.widget.self_reset()
         self.position = 0
-        self.workspaces_on = False
+        self.workspace_mode = False
+        #self.retag_mode = False
 
     @Slot()
     def handle_binding(self, event):
@@ -56,15 +67,18 @@ class GUI:
         elif symbol == 'Escape':
             self.hide_and_reset()
         elif symbol == 'ISO_Level3_Latch':
-            self.workspaces_on = True
+            self.workspace_mode = True
             tags.update()
             self.widget.clear()
             self._prepare_tags()
             self.widget.reappear()
         elif symbol == 'Return':
-            pass
+            self.hide_and_reset()
+            # sending messages in Slack
+            pyautogui.keyUp('enter')
+            pyautogui.hotkey('ctrl', 'enter')
         elif symbol == 'ISO_Level5_Latch':
-            self.show_retag_entry()
+            self.prepare_for_retag_entry()
             self.widget.reappear()
         else:
             self.resolve_symbol(symbol)
@@ -82,7 +96,7 @@ class GUI:
 
     def resolve_symbol(self, symbol):
         if self.position == 0:
-            if self.workspaces_on:
+            if self.workspace_mode:
                 tags.switch_to_tag(symbol)
                 return
             else:
@@ -92,6 +106,7 @@ class GUI:
                     i3.cache.focused_window)
 
         if symbol == 'space': symbol = '_'
+        elif symbol == 'minus': symbol = '_'
         elif symbol == 'period': symbol = '.'
 
         sublist = [x for x in self.sublist if x[0][self.position] == symbol]
@@ -292,10 +307,16 @@ class Tags:
         for window in i3.cache.tree.leaves():
             if window.id not in tagged_window_ids:
                 # copy window from workspace to tag
-                workspace_id = (i3.cache.tree
-                                .find_by_id(window.id)
-                                .workspace().id)
-                self.tag_tree.find_by_id(workspace_id).nodes.append(window)
+                workspace = (i3.cache.tree
+                               .find_by_id(window.id)
+                               .workspace())
+                try:
+                    self.tag_tree.find_by_id(workspace.id).nodes.append(window)
+                except AttributeError:
+                    logging.debug([workspace.id])
+                    logging.debug([workspace.id for workspace in i3.cache.tree.workspaces()])
+                    logging.debug(workspace.id in [workspace.id for workspace in i3.cache.tree.workspaces()])
+
 
 
 i3 = i3ipc_interface.i3
