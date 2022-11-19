@@ -18,7 +18,7 @@ import file_handler
 logger = logging.getLogger(__name__)
 
 class Launcher:
-    def fork(self, string):
+    def run(self, string):
         command = ['launcher.sh']
         command.extend(string.split())
         subprocess.run(command)
@@ -34,6 +34,7 @@ class GUI:
         self.workspace_mode = False
         self.sublist = None
         self.retag_mode = False
+        self.retag_command = ""
 
     def wake_up(self):
         i3.cache.update()
@@ -49,19 +50,21 @@ class GUI:
         #the above is not working, focusing done in i3 config
         tags.update()
         self._prepare_tags()
-        i3.mode_default()
-        gui.widget.show_retag_entry()
+        #i3.mode_default()
+        gui.widget.show_retag_label()
 
     def _self_reset(self):
         self.widget.self_reset()
         self.position = 0
         self.workspace_mode = False
-        #self.retag_mode = False
+        self.retag_mode = False
+        self.retag_command = ""
 
     @Slot()
     def handle_binding(self, event):
         symbol = event.binding.symbol
-        logging.debug([symbol])
+        logger.debug([symbol, self.retag_mode
+                      ])
         if event.binding.command.endswith('mode i3context'):
             self.wake_up()
         elif symbol == 'Escape':
@@ -72,12 +75,13 @@ class GUI:
             self.widget.clear()
             self._prepare_tags()
             self.widget.reappear()
-        elif symbol == 'Return':
+        elif symbol == 'Return' and not self.retag_mode:
             self.hide_and_reset()
             # sending messages in Slack
             pyautogui.keyUp('enter')
             pyautogui.hotkey('ctrl', 'enter')
         elif symbol == 'ISO_Level5_Latch':
+            self.retag_mode = True
             self.prepare_for_retag_entry()
             self.widget.reappear()
         else:
@@ -95,7 +99,14 @@ class GUI:
         self.widget.adjustSize()
 
     def resolve_symbol(self, symbol):
-        if self.position == 0:
+        if self.retag_mode:
+            if symbol == "Return":
+                tags.process_retag_entry(self.retag_command)
+                return
+            self.retag_command = "".join([self.retag_command, symbol])
+            self.widget.entry.setText(self.retag_command)
+            return
+        elif self.position == 0:
             if self.workspace_mode:
                 tags.switch_to_tag(symbol)
                 return
@@ -115,7 +126,7 @@ class GUI:
         if sublist_len == 0:
             return
         elif sublist_len == 1:
-            launcher.fork(sublist[0][1])
+            launcher.run(sublist[0][1])
         else:
             step = 1
             while len(set([x[0][self.position+step] for x in sublist])) == 1:
@@ -318,7 +329,10 @@ class Tags:
                     logging.debug(workspace.id in [workspace.id for workspace in i3.cache.tree.workspaces()])
 
 
-
+testing = False
+testing = True
+if testing:
+    subprocess.run(["bash", "pretest.sh"], cwd="/home/h/aa/i3context/")
 i3 = i3ipc_interface.i3
 tags = Tags()
 if __name__ == "__main__":
@@ -331,3 +345,6 @@ if __name__ == "__main__":
     app.exec_()
     # this will run after app.exit()
     i3.main_quit()
+    if testing:
+         subprocess.run(["bash", "posttest.sh"], cwd="/home/h/aa/i3context/")
+         print("done")

@@ -21,7 +21,6 @@ class MainWidget(QDialog):
         #self.setWindowFlag(Qt.Tool)
         #self.setWindowFlag(Qt.WindowStaysOnTopHint)
 
-
     def reappear(self):
         self.update_time_in_title()
         self.adjustSize()
@@ -40,15 +39,9 @@ class MainWidget(QDialog):
         except OverflowError:
             pass
 
-    def show_retag_entry(self):
-        self.entry = QLineEdit()
-        self.entry.returnPressed.connect(self.on_submit_retag_entry)
+    def show_retag_label(self):
+        self.entry = QLineEdit("Hit Return to close selected")
         self.layout.addWidget(self.entry)
-        self.entry.setFocus()
-
-    def on_submit_retag_entry(self):
-        entry = self.entry.text()
-        self.submit_retag_entry.emit(entry)
 
     def add_label(self, text, sunken=False, raised=False, color=None):
         label = QLabel(text, self)
